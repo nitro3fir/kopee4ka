@@ -4,15 +4,17 @@ from calendar import monthrange
 
 MONTHS_NUM_TO_STR_ROD = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
 MONTHS_NUM_TO_STR_IM = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
+CALCULATION_TYPE = ["накопительный", "амортизирующий"]
 
 class User:
 	def __init__(self, date):
 		self.__directory = ["main"]
 		self.__date = date
+		self.__calculation_type = 0
 		try:
 			with open("profile.json", "r") as readfile:
 				data = json.loads(readfile.read())
-			self.__income, self.__predicted_expenses = data.get(str(self.__date.year)).get(str(self.__date.month))
+			self.__income, self.__predicted_expenses, self.__calculation_type = data.get(str(self.__date.year)).get(str(self.__date.month))
 			with open("notes.json") as readfile:
 				data = json.loads(readfile.read())
 			self.__notes = data.get(str(self.__date.year)).get(str(self.__date.month))
@@ -27,20 +29,17 @@ class User:
 		except Exception as e:
 			return e
 
+	def get_calculation_type(self):
+		return self.__calculation_type
+
 	def get_income(self):
 		return self.__income
-
-	def get_total_expenses(self):
-		return sum(self.__notes)
-
-	def get_daily_rate(self):
-		return round(self.__predicted_expenses/len(self.__notes), 2)
 
 	def get_predicted_expenses(self):
 		return self.__predicted_expenses
 
-	def get_note_by_day(self, day):
-		return self.__notes[day]
+	def get_notes(self):
+		return self.__notes
 
 	def get_date(self):
 		return self.__date
@@ -50,6 +49,18 @@ class User:
 
 	def get_month_len(self):
 		return len(self.__notes)
+
+	def get_total_expenses(self):
+		return sum(self.__notes)
+
+	def set_calculation_type(self, type):
+		try:
+			if int(type) in (0, 1):
+				self.__calculation_type = int(type)
+			else:
+				return "type not 0 or 1"
+		except Exception as e:
+			return e
 
 	def set_income(self, note):
 		try:
@@ -81,44 +92,67 @@ class User:
 				notes_data = json.loads(readfile.read())
 			if not str(self.__date.year) in profile_data.keys():
 				profile_data[str(self.__date.year)] = {}
-			profile_data[str(self.__date.year)][str(self.__date.month)] = [self.__income, self.__predicted_expenses]
+			profile_data[str(self.__date.year)][str(self.__date.month)] = [self.__income, self.__predicted_expenses, self.__calculation_type]
 			if not str(self.__date.year) in notes_data.keys():
 				notes_data[str(self.__date.year)] = {}
 			notes_data[str(self.__date.year)][str(self.__date.month)] = self.__notes
 		except Exception as e:
-			profile_data = {str(self.__date.year):{str(self.__date.month):[self.__income, self.__predicted_expenses]}}
+			profile_data = {str(self.__date.year):{str(self.__date.month):[self.__income, self.__predicted_expenses, self.__calculation_type]}}
 			notes_data = {str(self.__date.year):{str(self.__date.month):self.__notes}}
 		with open('profile.json', 'w') as f:
 			json.dump(profile_data, f, ensure_ascii=False, indent=4)
 		with open('notes.json', 'w') as f: 
 			json.dump(notes_data, f, ensure_ascii=False, indent=4)
 
+def saving_type(report, notes, date, predicted_expenses):
+	daily_rate = round(predicted_expenses/len(notes), 2)
+	balance = 0
+	for day_num in range(date.day):
+		daily_rate_copy = daily_rate
+		balance = round(balance+daily_rate, 2)
+		note = notes[day_num]
+		if note > balance:
+			daily_rate = round(daily_rate - (note-balance)/(len(notes)-day_num), 2)
+			balance = 0
+		else:
+			balance = round(balance-note, 2)
+		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}:\nРасходы - {notes[day_num]}р\nБаланс на конец дня - {balance}р\nЛимит на начало дня - {daily_rate_copy}р\n")
+
+def amortizing_type(report, notes, date, predicted_expenses):
+	daily_rate = round(predicted_expenses/len(notes), 2)
+	for day_num in range(date.day):
+		daily_rate_copy = daily_rate
+		note = notes[day_num]
+		if note > daily_rate:
+			daily_rate = round(daily_rate - (note-daily_rate)/len(notes)-day_num, 2)
+		else:
+			daily_rate = round(daily_rate + (daily_rate-note)/len(notes)-day_num, 2)
+		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}:\nРасходы - {notes[day_num]}р\nЛимит на начало дня - {daily_rate_copy}р")
+
 def answer(user):
 	if user.get_directory()[-1] == "main":
 		return "Введите '1', чтобы перейти в месячные траты\nВведите '2', чтобы ввести расход за день"
-		return "1 - Перейти в профиль\n2 - Ввести результат за день\n\n"
 
 	elif user.get_directory()[-1] == "profile":
-		notes = []
-		daily_rate = user.get_daily_rate()
-		balance = 0
-		for day_num in range(user.get_date().day):
-			daily_rate_copy = daily_rate
-			balance = round(balance+daily_rate, 2)
-			note = user.get_note_by_day(day_num)
-			if note > balance:
-				daily_rate = round(daily_rate - note/(user.get_month_len()-day_num), 2)
-			else:
-				balance = round(balance-note, 2)
-			notes.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[user.get_date().month-1]}: расходы - {user.get_note_by_day(day_num)}р,  баланс - {balance}р, лимит на день - {daily_rate_copy}р")
-		notes.append(f"Доход: {user.get_income()}")
-		notes.append(f"Планируемый расход: {user.get_predicted_expenses()}")
-		notes.append(f"Уже потрачено: {user.get_total_expenses()}")
-		notes.append(f"Текущий баланс: {balance}")
-		return "\n".join([f"Траты за {MONTHS_NUM_TO_STR_IM[user.get_date().month-1]} по дням"]+notes+["Введите 'изм доход *значение*', чтобы изменить доход за месяц\nВведите 'изм расход *значение*', чтобы изменить целевой расход за месяц\nВведите 'назад', чтобы выйти в главное меню\n\n"])
+		report = []
+		report.append(f"Тип расчета: {CALCULATION_TYPE[user.get_calculation_type()]}")
+		report.append(f"Траты за {MONTHS_NUM_TO_STR_IM[user.get_date().month-1]} {user.get_date().year} года по дням\n")
+		if user.get_calculation_type() == 0:
+			saving_type(report, user.get_notes(), user.get_date(), user.get_predicted_expenses())
+		elif user.get_calculation_type() == 1:
+			amortizing_type(report, user.get_notes(), user.get_date(), user.get_predicted_expenses())
+		report.append(f"Доход: {user.get_income()}")
+		report.append(f"Планируемый расход: {user.get_predicted_expenses()}")
+		report.append(f"Уже потрачено: {user.get_total_expenses()}")
+		report.append("Введите 'изм доход *значение*', чтобы изменить доход за месяц")
+		report.append("Введите 'изм расход *значение*', чтобы изменить целевой расход за месяц")
+		report.append("Введите 'изм расчет *0 - накопительный, 1 - амортизирующий*', чтобы изменить тип расчета")
+		report.append("Введите 'расчет', чтобы посмотреть описание типов расчета")
+		report.append("Введите 'назад', чтобы выйти в главное меню\n\n")
+		return "\n".join(report)
 
 	elif user.get_directory()[-1] == "result":
-		return f"Введите трату за {user.get_date().day} {MONTHS_NUM_TO_STR_ROD[user.get_date().month-1]} (Пример: 234.54)\nИли введите 'назад' чтобы вернутся в меню\n\n"
+		return f"Введите трату за {user.get_date().day} {MONTHS_NUM_TO_STR_ROD[user.get_date().month-1]} {user.get_date().year} года (Пример: 234.54)\nИли введите 'назад' чтобы вернутся в меню\n\n"
 
 def processing(user, user_answer):
 	if user.get_directory()[-1] == "main":
@@ -142,6 +176,17 @@ def processing(user, user_answer):
 			else:
 				print("Расход изменен")
 
+		elif user_answer[0:10] == "изм расчет":
+			error = user.set_calculation_type(user_answer[11:])
+			if error:
+				print("Ошибка: не удалось определить тип")
+			else:
+				print("Тип расчета изменен")
+
+		elif user_answer[0:6] == "расчет":
+			print("Накопительный - излишки при тратах будут концентрироваться в балансе, избытки будут распределяться в оставшихся днях месяца")
+			print("Амортизирующий - излишки и избытки при тратах будут распределяться в оставшихся днях месяца")
+
 		elif user_answer == "назад":
 			user.get_back()
 
@@ -156,7 +201,7 @@ def processing(user, user_answer):
 				print("Запись сохранена")
 
 def main_loop():
-	user_answer = ""
+	user_answer = None
 	user = User(datetime.date.today())
 	print("Копее4ка\nЖиви на широкую ногу и не в кредит\nДля выхода из программы ввести 'q' (иначе введенные данные не сохранятся)\n\nВведите '1', чтобы перейти в месячные траты\nВведите '2', чтобы ввести расход за день\n")
 	while user_answer != "q":
