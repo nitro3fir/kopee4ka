@@ -52,7 +52,7 @@ class User:
 		return len(self.__notes)
 
 	def get_total_expenses(self):
-		return sum(self.__notes)
+		return round(sum(self.__notes), 2)
 
 	def set_calculation_type(self, type):
 		try:
@@ -108,6 +108,7 @@ class User:
 def saving_type(report, notes, date, predicted_expenses):
 	daily_rate = round(predicted_expenses/len(notes), 2)
 	balance = 0
+	report.append("Первое число - трата за день, второе - баланс на конец дня, третье - лимит на конец дня")
 	for day_num in range(date.day):
 		daily_rate_copy = daily_rate
 		balance = round(balance+daily_rate, 2)
@@ -117,18 +118,16 @@ def saving_type(report, notes, date, predicted_expenses):
 			balance = 0
 		else:
 			balance = round(balance-note, 2)
-		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}:\nРасходы - {notes[day_num]}р\nБаланс на конец дня - {balance}р\nЛимит на начало дня - {daily_rate_copy}р\n")
+		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}: {notes[day_num]:8}р {balance:8}р {daily_rate_copy:8}р")
 
 def amortizing_type(report, notes, date, predicted_expenses):
 	daily_rate = round(predicted_expenses/len(notes), 2)
+	report.append("Первое число - трата за день, второе - лимит на начало дня, третье - лимит на конец дня")
 	for day_num in range(date.day):
 		daily_rate_copy = daily_rate
 		note = notes[day_num]
-		if note > daily_rate:
-			daily_rate = round(daily_rate - (note-daily_rate)/len(notes)-day_num, 2)
-		else:
-			daily_rate = round(daily_rate + (daily_rate-note)/len(notes)-day_num, 2)
-		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}:\nРасходы - {notes[day_num]}р\nЛимит на начало дня - {daily_rate_copy}р\n")
+		daily_rate = round(daily_rate - (note-daily_rate)/(len(notes)-day_num), 2)
+		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}: {notes[day_num]:8}р {daily_rate_copy:8}р {daily_rate:8}р")
 
 def answer(user):
 	if user.get_directory()[-1] == "main":
