@@ -1,6 +1,7 @@
 import json
 import datetime
 from calendar import monthrange
+import os
 
 MONTHS_NUM_TO_STR_ROD = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
 MONTHS_NUM_TO_STR_IM = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
@@ -127,7 +128,7 @@ def amortizing_type(report, notes, date, predicted_expenses):
 			daily_rate = round(daily_rate - (note-daily_rate)/len(notes)-day_num, 2)
 		else:
 			daily_rate = round(daily_rate + (daily_rate-note)/len(notes)-day_num, 2)
-		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}:\nРасходы - {notes[day_num]}р\nЛимит на начало дня - {daily_rate_copy}р")
+		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}:\nРасходы - {notes[day_num]}р\nЛимит на начало дня - {daily_rate_copy}р\n")
 
 def answer(user):
 	if user.get_directory()[-1] == "main":
@@ -203,11 +204,11 @@ def processing(user, user_answer):
 def main_loop():
 	user_answer = None
 	user = User(datetime.date.today())
-	print("Копее4ка\nЖиви на широкую ногу и не в кредит\nДля выхода из программы ввести 'q' (иначе введенные данные не сохранятся)\n\nВведите '1', чтобы перейти в месячные траты\nВведите '2', чтобы ввести расход за день\n")
+	print("Копее4ка\nЖиви на широкую ногу и не в кредит\n\nВведите '1', чтобы перейти в месячные траты\nВведите '2', чтобы ввести расход за день\n")
 	while user_answer != "q":
 		print("Ввод: ", end="")
 		user_answer = input()
-		print("\n")
+		os.system('cls' if os.name == 'nt' else 'clear')
 		processing(user, user_answer)
 		print(answer(user))
 	del user
