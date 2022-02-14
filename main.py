@@ -118,7 +118,7 @@ def saving_type(report, notes, date, predicted_expenses):
 			balance = 0
 		else:
 			balance = round(balance-note, 2)
-		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}: {notes[day_num]:8}р {balance:8}р {daily_rate_copy:8}р")
+		report.append(f"{day_num+1:2} {MONTHS_NUM_TO_STR_ROD[date.month-1]}: {notes[day_num]:8.2f}р {balance:8.2f}р {daily_rate_copy:8.2f}р")
 
 def amortizing_type(report, notes, date, predicted_expenses):
 	daily_rate = round(predicted_expenses/len(notes), 2)
@@ -127,7 +127,7 @@ def amortizing_type(report, notes, date, predicted_expenses):
 		daily_rate_copy = daily_rate
 		note = notes[day_num]
 		daily_rate = round(daily_rate - (note-daily_rate)/(len(notes)-day_num), 2)
-		report.append(f"{day_num+1} {MONTHS_NUM_TO_STR_ROD[date.month-1]}: {notes[day_num]:8}р {daily_rate_copy:8}р {daily_rate:8}р")
+		report.append(f"{day_num+1:2} {MONTHS_NUM_TO_STR_ROD[date.month-1]}: {notes[day_num]:8.2f}р {daily_rate_copy:8.2f}р {daily_rate:8.2f}р")
 
 def answer(user):
 	if user.get_directory()[-1] == "main":
@@ -141,9 +141,9 @@ def answer(user):
 			saving_type(report, user.get_notes(), user.get_date(), user.get_predicted_expenses())
 		elif user.get_calculation_type() == 1:
 			amortizing_type(report, user.get_notes(), user.get_date(), user.get_predicted_expenses())
-		report.append(f"Доход: {user.get_income()}")
-		report.append(f"Планируемый расход: {user.get_predicted_expenses()}")
-		report.append(f"Уже потрачено: {user.get_total_expenses()}")
+		report.append(f"Доход: {user.get_income():.2f}")
+		report.append(f"Планируемый расход: {user.get_predicted_expenses():.2f}")
+		report.append(f"Уже потрачено: {user.get_total_expenses():.2f}")
 		report.append("Введите 'изм доход *значение*', чтобы изменить доход за месяц")
 		report.append("Введите 'изм расход *значение*', чтобы изменить целевой расход за месяц")
 		report.append("Введите 'изм расчет *0 - накопительный, 1 - амортизирующий*', чтобы изменить тип расчета")
